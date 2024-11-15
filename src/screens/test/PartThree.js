@@ -15,7 +15,7 @@ import { useGetPosts } from "../../hooks/useGetPosts";
 // Note: The activity indicator will only show when there is no data in the query cache.
 // This is because the query will be fetched from the cache first before fetching from the server.
 export default function ({ navigation }) {
-  const { data: posts, isLoading } = useGetPosts();
+  const { data: posts, isLoading } = useGetPosts(3);
   const [searchText, setSearchText] = useState("");
 
   const filteredPosts =
