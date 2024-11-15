@@ -8,3 +8,7 @@ export const CommentKeys = {
   all: ["Comment"],
   detail: (id) => [...CommentKeys.all, { id }],
 };
+
+export const HiddenCommentKeys = {
+  all: ["HiddenComments"],
+};

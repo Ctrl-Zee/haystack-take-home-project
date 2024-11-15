@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   SafeAreaView,
   View,
@@ -10,6 +9,10 @@ import {
 } from "react-native";
 import { useGetPostById } from "../../hooks/useGetPostById";
 import { useGetPostComments } from "../../hooks/useGetPostComments";
+import { useGetHiddenComments } from "../../hooks/useGetHiddenComments";
+import { useUpdateHiddenComments } from "../../hooks/useUpdateHiddenComments";
+import { useQueryClient } from "@tanstack/react-query";
+import { HiddenCommentKeys } from "../../query/QueryKeys";
 
 export default function ({ route }) {
   const { data: post, isLoading: postLoading } = useGetPostById(
@@ -18,24 +21,36 @@ export default function ({ route }) {
   const { data: comments, isLoading: commentsLoading } = useGetPostComments(
     route.params.id
   );
-  const [hiddenComments, setHiddenComment] = useState([]);
+  const { data: hiddenComments } = useGetHiddenComments();
+  const { mutate: hideComment } = useUpdateHiddenComments();
+  const queryClient = useQueryClient();
 
   const isLoading = postLoading || commentsLoading;
 
   const visibleComments = comments?.filter(
-    (comment) => !hiddenComments.includes(comment.id)
+    (comment) =>
+      !hiddenComments.some(
+        (hidden) => hidden.id === comment.id && hidden.postId === comment.postId
+      )
   );
 
-  const handleHideComment = (id) => {
-    setHiddenComment([...hiddenComments, id]);
+  const handleHideComment = (comment) => {
+    hideComment([...hiddenComments, comment], {
+      onSettled: () => {
+        queryClient.invalidateQueries(HiddenCommentKeys.all);
+      },
+    });
   };
 
-  const ListItem = ({ id, email, body }) => (
+  const ListItem = ({ comment }) => (
     <View>
-      <DisplayItem title="Email" detail={email} />
-      <DisplayItem title="Body" detail={body} />
+      <DisplayItem title="Email" detail={comment.email} />
+      <DisplayItem title="Body" detail={comment.body} />
       <View style={styles.buttonContainer}>
-        <Pressable style={styles.button} onPress={() => handleHideComment(id)}>
+        <Pressable
+          style={styles.button}
+          onPress={() => handleHideComment(comment)}
+        >
           <Text style={styles.buttonText}>Hide Comment</Text>
         </Pressable>
       </View>
@@ -55,9 +70,7 @@ export default function ({ route }) {
           </View>
           <FlatList
             data={visibleComments}
-            renderItem={({ item }) => (
-              <ListItem id={item.id} email={item.email} body={item.body} />
-            )}
+            renderItem={({ item }) => <ListItem comment={item} />}
             keyExtractor={(item) => item.id}
           />
         </View>
